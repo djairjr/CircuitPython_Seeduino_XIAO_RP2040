@@ -270,6 +270,7 @@ while True:
             pass
 ```
 **Step 7: SD Card Reader**
+
 The expansion board also has an SD Card interface, using SPI. 
 In the XIAO RP2040 diagram, the CS pin of the SPI interface is pin D7. 
 But in the Expansion Board, the indicated pin is D2 (which is the correct one).
