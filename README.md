@@ -269,8 +269,65 @@ while True:
         while button.value:
             pass
 ```
+**Step 7: SD Card Reader**
+The expansion board also has an SD Card interface, using SPI. In the XIAO RP2040 diagram, the CS pin of the SPI interface is pin D2.
+Don't forget to copy the adafruit_sdcard library to your /lib folder.
 
-**Step 7: Real Time Clock**
+```
+import os
+
+import adafruit_sdcard
+import board
+import busio
+import digitalio
+import storage
+
+# In XIAO, SPI CS is D2 Pin
+SD_CS = board.D2
+
+# Connect to the card and mount the filesystem.
+
+
+spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
+cs = digitalio.DigitalInOut(SD_CS)
+sdcard = adafruit_sdcard.SDCard(spi, cs)
+vfs = storage.VfsFat(sdcard)
+storage.mount(vfs, "/sd")
+
+def print_directory(path, tabs=0):
+    for file in os.listdir(path):
+        stats = os.stat(path + "/" + file)
+        filesize = stats[6]
+        isdir = stats[0] & 0x4000
+
+        if filesize < 1000:
+            sizestr = str(filesize) + " by"
+        elif filesize < 1000000:
+            sizestr = "%0.1f KB" % (filesize / 1000)
+        else:
+            sizestr = "%0.1f MB" % (filesize / 1000000)
+
+        prettyprintname = ""
+        for _ in range(tabs):
+            prettyprintname += "   "
+        prettyprintname += file
+        if isdir:
+            prettyprintname += "/"
+        print('{0:<40} Size: {1:>10}'.format(prettyprintname, sizestr))
+
+        # recursively print directory contents
+        if isdir:
+            print_directory(path + "/" + file, tabs + 1)
+
+print("Files on filesystem:")
+print("====================")
+print_directory("/sd")
+
+```
+
+This simple script just show whatever is your SDCard in REPL.
+
+**Step 8: Real Time Clock**
 
 And here we can see the RTC working.
 
@@ -401,6 +458,95 @@ while True:
     watch_group.append(clock)
     watch_group.append(date)
     watch_group.append(text)
+
+    oled.show(watch_group)
+```
+
+**Step 9: Weather Station**
+Finally, I included a Humidity and Temperature Sensor, DHT11 and with some changes in the previous code, I managed to set up a small meteorological station.
+
+Plug your DHT11 sensor into the Groove connector on the expansion board, at pin D0.
+
+Just save the file to your CIRCUITPY drive with the name code.py. So it will run every time the system starts up.
+I started from the example indicated in the link:
+
+https://learn.adafruit.com/dht/dht-circuitpython-code
+
+```
+import time
+import displayio
+import terminalio
+import busio
+import board
+import adafruit_displayio_ssd1306
+import adafruit_pcf8563
+import adafruit_dht
+
+from adafruit_display_text import label
+
+displayio.release_displays()
+
+i2c = busio.I2C(scl=board.SCL, sda=board.SDA)
+
+font = terminalio.FONT
+
+display_bus = displayio.I2CDisplay(i2c, device_address=0x3C)  # The address of my Board
+rtc = adafruit_pcf8563.PCF8563(i2c)
+dht = adafruit_dht.DHT11(board.D0)
+
+oled = adafruit_displayio_ssd1306.SSD1306(display_bus, width=128, height=64)
+
+while True:
+    current = rtc.datetime
+
+    try:
+        temp_data = dht.temperature
+        hum_data = dht.humidity
+        old_temp = temp_data
+        old_hum = hum_data
+    except RuntimeError as e:
+        temp_data = old_temp
+        hum_data = old_hum
+
+    hour = current.tm_hour % 12
+    if hour == 0:
+        hour = 12
+
+    am_pm = "AM"
+    if current.tm_hour / 12 >= 1:
+        am_pm = "PM"
+
+    time_display = "{:d}:{:02d}:{:02d} {}".format(hour, current.tm_min, current.tm_sec, am_pm)
+    date_display = "{:d}/{:d}/{:d}".format(current.tm_mon, current.tm_mday, current.tm_year)
+    temp_display = "Temp: {:.1f} *C".format (temp_data)
+    hum_display =  "Umid: {}%".format (hum_data)
+
+    clock = label.Label(font, text=time_display)
+    date = label.Label(font, text=date_display)
+    temp = label.Label(font, text=temp_display)
+    hum = label.Label(font, text=hum_display)
+
+    (_, _, width, _) = date.bounding_box
+    date.x = oled.width // 2 - width // 2
+    date.y = 9
+
+    (_, _, width, _) = clock.bounding_box
+    clock.x = oled.width // 2 - width // 2
+    clock.y = 19
+
+    (_, _, width, _) = temp.bounding_box
+    temp.x = oled.width // 2 - width // 2
+    temp.y = 29
+
+    (_, _, width, _) = hum.bounding_box
+    hum.x = oled.width // 2 - width // 2
+    hum.y = 39
+
+    watch_group = displayio.Group()
+    watch_group.append(clock)
+    watch_group.append(date)
+    watch_group.append(temp)
+    watch_group.append(hum)
 
     oled.show(watch_group)
 ```
