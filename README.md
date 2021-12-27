@@ -270,7 +270,10 @@ while True:
             pass
 ```
 **Step 7: SD Card Reader**
-The expansion board also has an SD Card interface, using SPI. In the XIAO RP2040 diagram, the CS pin of the SPI interface is pin D2.
+The expansion board also has an SD Card interface, using SPI. 
+In the XIAO RP2040 diagram, the CS pin of the SPI interface is pin D7. 
+But in the Expansion Board, the indicated pin is D2 (which is the correct one).
+
 Don't forget to copy the adafruit_sdcard library to your /lib folder.
 
 ```
@@ -282,11 +285,10 @@ import busio
 import digitalio
 import storage
 
-# In XIAO, SPI CS is D2 Pin
+# In XIAO EXPANSION BOARD, SPI CS is D2 Pin
 SD_CS = board.D2
 
 # Connect to the card and mount the filesystem.
-
 
 spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
 cs = digitalio.DigitalInOut(SD_CS)
