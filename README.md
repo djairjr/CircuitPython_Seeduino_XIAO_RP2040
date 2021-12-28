@@ -279,23 +279,30 @@ Don't forget to copy the adafruit_sdcard library to your /lib folder.
 
 ```
 import os
-
+import sys
 import adafruit_sdcard
 import board
 import busio
 import digitalio
 import storage
 
-# In XIAO EXPANSION BOARD, SPI CS is D2 Pin
+# In XIAO Expansion Board, SPI CS is D2 Pin not D7
 SD_CS = board.D2
 
 # Connect to the card and mount the filesystem.
-
 spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
 cs = digitalio.DigitalInOut(SD_CS)
 sdcard = adafruit_sdcard.SDCard(spi, cs)
 vfs = storage.VfsFat(sdcard)
 storage.mount(vfs, "/sd")
+
+# Use the filesystem as normal! Our files are under /sd
+
+# if you want to add some space to your libraries...
+sys.path.append("/sd")
+sys.path.append("/sd/lib")  ## switch to the path to SD card
+
+# This helper function will print the contents of the SD
 
 def print_directory(path, tabs=0):
     for file in os.listdir(path):
